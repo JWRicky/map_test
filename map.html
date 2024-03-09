@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ricky Map</title>
+  </head>
+  <body>
+    <h1>Search Spot App</h1>
+    <input type="text" id="samplelat" value="" />
+    <input type="text" id="samplelon" value="" />
+    <button onclick="GetMap(map)">search</button>
+
+    <!-- <div id="searchBoxContainer">
+      <input type="text" id="searchBox" />
+    </div> -->
+
+    <!-- <fieldset style="width: 800px; margin-top: 10px">
+      <legend>Autosuggest with Map Sample</legend>
+      This sample shows the basic implementation of the autosuggestion module
+      with a map.
+    </fieldset> -->
+
+    <!-- <script
+      src="https://www.bing.com/api/maps/mapcontrol?callback=GetMap&key=[AmLMDWv8YNGcPyc2w4c50khYSzfHnxx43PNisMtst_vOYHiPmrDGmom9KsFFfDRl]"
+      async
+      defer
+    ></script> -->
+    <script
+      type="text/javascript"
+      src="https://www.bing.com/api/maps/mapcontrol?key=AmLMDWv8YNGcPyc2w4c50khYSzfHnxx43PNisMtst_vOYHiPmrDGmom9KsFFfDRl&callback=loadMapScenario"
+      async
+      defer
+    ></script>
+
+    <div id="myMap" style="width: 500px; height: 500px; margin-top: 10px"></div>
+    <script>
+      var map;
+      var center;
+      var pin;
+      let infobox;
+
+      //ここに随時モジュールを追加していく？(調査中)
+      // map = new Microsoft.Maps.Map("#myMap", {
+      //   credentials:
+      //     "AmLMDWv8YNGcPyc2w4c50khYSzfHnxx43PNisMtst_vOYHiPmrDGmom9KsFFfDRl",
+      //   center: new Microsoft.Maps.Location(valueOfLat.value, valueOfLon.value),
+      //   navigationBarMode: navigationBarMode.square,
+      //   supportedMapTypes: [
+      //     Microsoft.Maps.MapTypeId.road,
+      //     Microsoft.Maps.MapTypeId.aerial,
+      //   ],
+      //   showSearchBar: true,
+      // });
+
+      function loadMapScenario() {
+        var map = new Microsoft.Maps.Map(document.getElementById("myMap"), {
+          center: new Microsoft.Maps.Location(55.751244, 37.618423),
+        });
+        // Binding the events
+
+        //マップ内をクリックされた際のイベント(まだクリック前に呼ばれるので調査中)
+        Microsoft.Maps.Events.addHandler(map, "click", clickedMap(map));
+        return map;
+      }
+
+      /**
+       * プッシュピンを取得する
+       */
+      function GetMap(map) {
+        //経度・緯度
+        var valueOfLat = document.getElementById("samplelat");
+        var valueOfLon = document.getElementById("samplelon");
+
+        if (valueOfLat.value == "" || valueOfLon.value == "") {
+          valueOfLat.value = 55.751244;
+          valueOfLon.value = 37.618423;
+        }
+
+        map = new Microsoft.Maps.Map(document.getElementById("myMap"), {
+          center: new Microsoft.Maps.Location(
+            valueOfLat.value,
+            valueOfLon.value
+          ),
+        });
+
+        //ナビゲーションバーの見た目を変更する
+        var navigationBarMode = Microsoft.Maps.NavigationBarMode;
+
+        center = map.getCenter();
+
+        infobox = new Microsoft.Maps.Infobox(map.getCenter(), {
+          visible: false,
+        });
+        infobox.setMap(map);
+
+        //Create custom Pushpin
+        pin = new Microsoft.Maps.Pushpin(center, {
+          title: "テストデータ",
+          color: "red",
+          // icon: "images/poi_custom.png",
+          icon: createRedArrow(45),
+          subTitle: "City Center",
+          text: "Spot",
+        });
+
+        pin.metadata = {
+          title: "Pin Title",
+          description: "Pin discription",
+        };
+
+        var pin2 = new Microsoft.Maps.Pushpin(center, {
+          title: "",
+          color: "red",
+          icon: "images/poi_custom.png",
+          subTitle: "City Center",
+          text: "Spot",
+        });
+
+        var ms = new Microsoft.Maps.Events.addHandler(
+          pin,
+          "click",
+          pushpinClicked
+        );
+
+        //Add the pushpin to the map
+        map.entities.push(pin);
+        //map.entities.push(pin2);
+
+        return map;
+      }
+
+      // //マップ内をクリックされた際のイベント
+      // Microsoft.Maps.Events.addHandler(map, "click", clickedMap(map));
+
+      /**
+       * マップ内でクリックされた際に、プッシュピンを追加する
+       */
+      function clickedMap(map) {
+        var pushpin = new Microsoft.Maps.Pushpin(map.getCenter(), {
+          title: "",
+          color: "red",
+          icon: "images/poi_custom.png",
+          subTitle: "Clicked",
+          text: "test data",
+        });
+
+        map.entities.push(pushpin);
+      }
+
+      /**
+       * モジュールのロード(以下の機能はまだ実装完了していない？)
+       */
+      Microsoft.Maps.loadModule("Microsoft.Maps.AutoSuggest", function () {
+        var manager = new Microsoft.Maps.AutosuggestManager({ map: map });
+        manager.attachAutosuggest(
+          "#searchBox",
+          "#searchBoxContainer",
+          suggestionSelected
+        );
+      });
+
+      /**
+       * 候補選択
+       */
+      function suggestionSelected(result) {
+        //Remove previously selected suggestions from the map.
+        map.entities.clear();
+
+        //Show the suggestion as a pushpin and center map over it.
+        var pin = new Microsoft.Maps.Pushpin(result.location);
+        map.entities.push(pin);
+
+        map.setView({ bounds: result.bestView });
+      }
+
+      /**
+       * 現在地マーカー
+       */
+      function createRedArrow(heading) {
+        var c = document.createElement("canvas");
+        c.width = 24;
+        c.height = 24;
+
+        var ctx = c.getContext("2d");
+
+        //Offset the canvas such that we will rotate around the center of our arrow
+        ctx.translate(c.width * 0.5, c.height * 0.5);
+
+        //Rotate the canvas by the desired heading
+        ctx.rotate((heading * Math.PI) / 180);
+
+        //Return the canvas offset back to it's original position
+        ctx.translate(-c.width * 0.5, -c.height * 0.5);
+
+        ctx.fillStyle = "#f00";
+
+        //Draw a path in the shape of an arrow.
+        ctx.beginPath();
+        ctx.moveTo(12, 0);
+        ctx.lineTo(5, 20);
+        ctx.lineTo(12, 15);
+        ctx.lineTo(19, 20);
+        ctx.lineTo(12, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        //Generate the base64 image URL from the canvas.
+        return c.toDataURL();
+      }
+
+      /**
+       * スポットがクリックされたときのイベント
+       */
+      function pushpinClicked(e) {
+        if (e.target.metadata) {
+          //Set the infobox options with the metadata of the pushpin.
+          infobox.setOptions({
+            location: e.target.getLocation(),
+            title: e.target.metadata.title,
+            description: e.target.metadata.description,
+            visible: true,
+          });
+        }
+      }
+
+      (async () => {
+        let script = document.getElementById("script");
+        let bingKey = await fetch(
+          "https://samples.azuremaps.com/api/GetBingMapsKey"
+        )
+          .then((r) => r.text())
+          .then((key) => {
+            return key;
+          });
+
+        script.setAttribute(
+          "src",
+          `https://www.bing.com/api/maps/mapcontrol?callback=GetMap&key={$bingKey}`
+        );
+        document.body.appendChild(script);
+      })();
+    </script>
+  </body>
+</html>
