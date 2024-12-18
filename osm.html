@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""/>
+    <script src="https://cdn.skypack.dev/@geolonia/normalize-japanese-addresses"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
@@ -29,8 +30,12 @@
             <input type="text" id="lat" value="">
             <input type="text" id="lon" value="">
             <input type="text" id="zoom" value="">
+        </div>
+        <p>search</p>
+        <div class="inputs">
+            <input type="text" id="address" />
             <div>
-                <button onclick="search(map)">search</button>
+                <button id="search">search</button>
             </div>
         </div>
     </div>
@@ -46,35 +51,26 @@
 
     function loadMap() {
 
-        let lat = document.getElementById('lat');
-        let lon = document.getElementById('lon');
-        let zoom = document.getElementById('zoom');
-
-
-
-        var map = L.map('map').setView([51.505, -0.09], 13);
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);
+        const map = L.map("map", {
+            center: [35.021028, 135.755583],
+            zoom: 15
+        });
+        const baseLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors'"
+        });
+        baseLayer.addTo(map);
     }
 
-    function search(map) {
-        if (lat.value !== '' && lon.value !== '' && zoom.value !== '') {
 
-            var container = L.DomUtil.get('map'); 
-            if(container != null) { 
-                container._leaflet_id = null;
-            }
-
-            map.remove();
-            var map = L.map('map').setView([lat.value, lon.value], zoom.value);
-            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            }).addTo(map);
-        }
-    }
+    document.getElementById("search").addEventListener("click", () => {
+        const address = document.getElementById("address").value;
+        normalize(address).then(result => {
+            map.flyTo([result.lat, result.lng]); // 住所の地点に移動
+            const marker = L.marker([result.lat, result.lng]); // ピンを作成
+            marker.bindPopup(address); // ピンをクリックすると住所が表示されるようにする
+            marker.addTo(map); // 地図にピンを立てる
+        });
+    });
 
     
 </script>
